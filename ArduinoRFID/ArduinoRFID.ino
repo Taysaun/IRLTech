@@ -70,21 +70,23 @@ void loop() {
     if (inputString.equals("read")) { // read the entire tag
       readNFC();
     }
-    if (inputString[0] == 'r' && inputString[1] == '0') { // read record 0
-      // get the record number
-      // int customRecordNumber = 0;
+    if (inputString[0] == 'r' && inputString[1] == '0') { 
+      // read record 0
+      // dedicated to first half of API Key
+      // formbeta.yorktechapps.com/apikey
       readRecord(0);
-    } else if (inputString[0] == 'r' && inputString[1] == '1') { // read record 1
-      // get the record number
-      // int customRecordNumber = 1;
+    } else if (inputString[0] == 'r' && inputString[1] == '1') { 
+      // read record 1
+      // dedicated to second half of API Key
+      // formbeta.yorktechapps.com/apikey
       readRecord(1);
-    } else if (inputString[0] == 'r' && inputString[1] == '2') { // read record 2
-      // get the record number
-      // int customRecordNumber = 2;
+    } else if (inputString[0] == 'r' && inputString[1] == '2') { 
+      // read record 2
+      // no dedicated data
       readRecord(2);
-    } else if (inputString[0] == 'r' && inputString[1] == '3') {// read record 3
-      // get the record number
-      // int customRecordNumber = 3;
+    } else if (inputString[0] == 'r' && inputString[1] == '3') {
+      // read record 3
+      // no dedicated data
       readRecord(3);
     } else if (inputString[0] == 'r' && inputString[1] == '4') {
       readRecord(4);
@@ -152,9 +154,9 @@ void readRecord(int recordNumber) {
     NfcTag tag = nfc.read();
 
     // print the tag type and the UID
-    Serial.println(tag.getTagType());
-    Serial.print("UID: ");
-    Serial.println(tag.getUidString());
+    // Serial.println(tag.getTagType());
+    // Serial.print("UID: ");
+    // Serial.println(tag.getUidString());
 
     if (tag.hasNdefMessage())  // every tag won't have a message
     {
@@ -162,28 +164,28 @@ void readRecord(int recordNumber) {
       NdefMessage message = tag.getNdefMessage();
 
       // Print the number of records on the tag
-      Serial.print("\nThis NFC Tag contains an NDEF Message with ");
+      // Serial.print("\nThis NFC Tag contains an NDEF Message with ");
       // print the number of records on the tag
-      Serial.print(message.getRecordCount());
-      Serial.print(" NDEF Record");
-      if (message.getRecordCount() != 1) {
-        Serial.print("s");
-      }
-      Serial.println(".");
+      // Serial.print(message.getRecordCount());
+      // Serial.print(" NDEF Record");
+      // if (message.getRecordCount() != 1) {
+      //   Serial.print("s");
+      // }
+      // Serial.println(".");
 
       // cycle through the records, printing some info from each
       int recordCount = message.getRecordCount();
       // for (int i = 0; i < recordCount; i++) {
-      Serial.print("\nNDEF Record ");
-      Serial.println(recordNumber + 1);
+      // Serial.print("\nNDEF Record ");
+      // Serial.println(recordNumber + 1);
       NdefRecord record = message.getRecord(recordNumber);
       // NdefRecord record = message[i]; // alternate syntax
       
       // Print the TNF, Type, and Payload Length
-      Serial.print("  TNF: ");
-      Serial.println(record.getTnf());
-      Serial.print("  Type: ");
-      Serial.println(record.getType());  // will be "" for TNF_EMPTY
+      // Serial.print("  TNF: ");
+      // Serial.println(record.getTnf());
+      // Serial.print("  Type: ");
+      // Serial.println(record.getType());  // will be "" for TNF_EMPTY
 
       // The TNF and Type should be used to determine how your application processes the payload
       // There's no generic processing for the payload, it's returned as a byte[]
@@ -271,7 +273,7 @@ void writeRecord(int recordNumber, String payload) {
         NdefRecord record = message.getRecord(i);
         if (i == recordNumber) {
           // Add your new record
-          newMessage.addUriRecord(payload);
+          newMessage.addTextRecord(payload);
         } else {
           // Add the existing record
           newMessage.addRecord(record);
