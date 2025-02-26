@@ -3,7 +3,7 @@
 #include <SPI.h>
 // include the PN532 library
 #include <PN532_SPI.h>
-#include <PN532.h>
+#include <Adafruit_PN532.h>
 // include the NfcAdapter library
 #include <NfcAdapter.h>
 // include the NdefMessage library
@@ -11,7 +11,8 @@
 #include <NdefRecord.h>
 
 PN532_SPI interface(SPI, 10);            // create a PN532 SPI interface with the SPI CS terminal located at digital pin 10
-NfcAdapter nfc = NfcAdapter(interface);  // create an NFC adapter object
+NfcAdapter nfcAdapter = NfcAdapter(interface);  // create an NFC adapter object
+Adafruit_PN532 nfc();
 String tagId = "None";
 NdefMessage message = NdefMessage();            // createa a message object
 
@@ -22,7 +23,7 @@ void setup(void) {
   Serial.println("System initialized");
 
   // initialize the NFC adapter
-  nfc.begin();
+  nfcAdapter.begin();
   Serial.print("\n");
 
   // print the commands that can be used
@@ -65,6 +66,7 @@ void setup(void) {
 void loop() {
 
   while (Serial.available() > 0) {
+
     String inputString = Serial.readStringUntil('\n');  // Read the incoming data as a string
     inputString.trim(); // Remove leading and trailing whitespaces
     if (inputString.equals("read")) { // read the entire tag
@@ -110,7 +112,7 @@ void loop() {
       String writeString = inputString.substring(inputString.indexOf("/") + 1);
       writeRecord(4, writeString);
     } else if (inputString.equals("erase")) { // erase the tag
-      nfc.erase();
+      nfcAdapter.erase();
     }
    
   }
@@ -119,9 +121,9 @@ void loop() {
 // a function that will read the entire nfc tag
 void readNFC() {
   // check if a tag is present
-  if (nfc.tagPresent()) {
+  if (nfcAdapter.tagPresent()) {
     // read the tag
-    NfcTag tag = nfc.read();
+    NfcTag tag = nfcAdapter.read();
     tag.print();
 
     // get the tag id
@@ -149,9 +151,9 @@ String removeNonNumeric(String str) {
 
 // a function that will read specific records
 void readRecord(int recordNumber) {
-  if (nfc.tagPresent()) {
+  if (nfcAdapter.tagPresent()) {
     // read the tag
-    NfcTag tag = nfc.read();
+    NfcTag tag = nfcAdapter.read();
 
     // print the tag type and the UID
     // Serial.println(tag.getTagType());
@@ -252,8 +254,8 @@ void readRecord(int recordNumber) {
 void writeRecord(int recordNumber, String payload) {
 
   // check if a tag is present
-  if (nfc.tagPresent()) {
-    NfcTag tag = nfc.read();
+  if (nfcAdapter.tagPresent()) {
+    NfcTag tag = nfcAdapter.read();
     Serial.println(tag.getTagType());
     Serial.print("UID: ");
     Serial.println(tag.getUidString());
@@ -286,10 +288,10 @@ void writeRecord(int recordNumber, String payload) {
       }
 
       // Erase the tag
-      nfc.erase();
+      nfcAdapter.erase();
 
       // Write the new message to the tag
-      boolean success = nfc.write(newMessage);
+      boolean success = nfcAdapter.write(newMessage);
       if (success) {
         Serial.println("Success. Try reading this tag with your phone.");
       } else {
