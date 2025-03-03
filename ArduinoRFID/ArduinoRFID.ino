@@ -16,7 +16,7 @@
 
 // PN532_SPI interface(SPI, 10);            // create a PN532 SPI interface with the SPI CS terminal located at digital pin 10
 // NfcAdapter nfcAdapter = NfcAdapter(interface);  // create an NFC adapter object
-Adafruit_PN532 nfc(SDA_PIN, SCL_PIN);
+Adafruit_PN532 nfc(10);
 String tagId = "None";
 NdefMessage message = NdefMessage();            // createa a message object
 
@@ -88,6 +88,11 @@ void loop() {
     } else {
       Serial.println("Write failed!");
     }
+
+    if (nfc.mifareultralight_ReadPage(4, data)) {
+      Serial.println("Exists");
+    }
+      
 
   // while (Serial.available() > 0) {
 
