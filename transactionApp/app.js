@@ -149,9 +149,8 @@ app.post('/transaction', isAuthenticated, (req, res) => {
     readFromPort("r0/", (data) => {
         receiverNumber = data
     })
-    console.log(receiverNumber)
     let amount = req.body.amount
-    let account = req.body.accountNumber
+    let account = receiverNumber.replace(/\D/g, "")
     db.run("UPDATE users SET balance = balance + ? WHERE accountNum=?", [amount, account], (err) => {
         if (err) {
             console.error(err)
