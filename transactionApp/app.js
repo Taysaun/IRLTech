@@ -6,60 +6,60 @@ const app = express()
 const { SerialPort } = require('serialport'); // Import the serialport module
 const { ReadlineParser } = require('@serialport/parser-readline'); // Import the parser module
 const readline = require('readline').createInterface({
-  input: process.stdin,
-  output: process.stdout
+    input: process.stdin,
+    output: process.stdout
 });
 
 let port;
 let pendingCommand;
 
 SerialPort.list()
-  .then((ports) => {
-    // Create a new SerialPort instance
-    port = new SerialPort({
-      path: 'COM4',
-      baudRate: 115200,
-      autoOpen: true,
-    });
-    // If there's a pending command, write it to the port
-    if (pendingCommand) {
-      port.write(pendingCommand + '\n');
-      pendingCommand = null;
-    }
+    .then((ports) => {
+        // Create a new SerialPort instance
+        port = new SerialPort({
+            path: 'COM4',
+            baudRate: 115200,
+            autoOpen: true,
+        });
+        // If there's a pending command, write it to the port
+        if (pendingCommand) {
+            port.write(pendingCommand + '\n');
+            pendingCommand = null;
+        }
 
-    let isCommandPrompted = false;
+        let isCommandPrompted = false;
 
-    // Create a new parser instance
-    const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }))
+        // Create a new parser instance
+        const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }))
 
-    // Open the port
-    port.on("open", () => {
-      console.log('Serial port open');
-    });
+        // Open the port
+        port.on("open", () => {
+            console.log('Serial port open');
+        });
 
-    // Read the port data
-    parser.on('data', data => {
-      if (data.trim() !== 'Here are some commands that can be used: read, write, erase') {
-        console.log(data);
-       
-      }
-      if (!isCommandPrompted) {
-        setTimeout(() => {
-          readline.question('Commands: \n To write to specific records \n write \n To read specific records \n r0/  \n r1/ \n r2/ \n r3/ \n', command => {
-            if (command) {
-              var sendMessage = command + '\n'
-              port.write(sendMessage)
-              // readline.close();
+        // Read the port data
+        parser.on('data', data => {
+            if (data.trim() !== 'Here are some commands that can be used: read, write, erase') {
+                console.log(data);
+
             }
-          });
-          isCommandPrompted = true;
-        }, 1000); // Delay of 1 second
-      }
-    });
-  })
-  .catch((err) => console.log(err));
+            if (!isCommandPrompted) {
+                setTimeout(() => {
+                    readline.question('Commands: \n To write to specific records \n write \n To read specific records \n r0/  \n r1/ \n r2/ \n r3/ \n', command => {
+                        if (command) {
+                            var sendMessage = command + '\n'
+                            port.write(sendMessage)
+                            // readline.close();
+                        }
+                    });
+                    isCommandPrompted = true;
+                }, 1000); // Delay of 1 second
+            }
+        });
+    })
+    .catch((err) => console.log(err));
 
-  function writeToPort(command, callback) {
+function writeToPort(command, callback) {
     if (port) {
         port.write(command + '\n');
         if (callback && typeof callback === 'function') {
@@ -72,20 +72,29 @@ SerialPort.list()
 }
 
 function readFromPort(command, callback) {
-  if (port) {
-      let dataChunks = '';
-      port.write(command + '\n');
-      port.on('data', function(data) {
-          dataChunks += data.toString();
-          if (data.toString().endsWith('\n')) {
-              callback(dataChunks);
-              port.removeAllListeners('data'); // remove the listener once we're done
-          }
-      });
-  } else {
-      // If the port is not initialized yet, store the command
-      pendingCommand = command;
-  }
+    if (port) {
+        let dataChunks = '';
+        port.write(command + '\n');
+
+        port.on('data', function (data) {
+            dataChunks += data.toString();
+            if (data.toString().endsWith('\n')) {
+                callback(dataChunks);
+                port.removeAllListeners('data'); // remove the listener once we're done
+            }
+        });
+
+        setTimeout(() => {
+            if (dataChunks === '') {
+                callback(dataChunks);
+                port.removeAllListeners('data')
+            }
+        }, 1000);
+
+    } else {
+        // If the port is not initialized yet, store the command
+        pendingCommand = command;
+    }
 }
 
 app.use(session({
@@ -102,7 +111,7 @@ let db = new sqlite3.Database("data.db", (err) => {
     }
 })
 
-app.use(express.urlencoded({extended: true}))
+app.use(express.urlencoded({ extended: true }))
 
 function isAuthenticated(req, res, next) {
     if (req.session.num) {
@@ -144,34 +153,41 @@ app.get('/transaction', isAuthenticated, (req, res) => {
 })
 
 app.post('/transaction', isAuthenticated, (req, res) => {
-    
-    readFromPort("r0/", function(data) {
-        let amount = req.body.amount
-        let account = data
-        if (amount == 0) {
-            res.render('error', {
-                error: "Insufficient Amount",
-                destination: "/transaction"
-            })
-        } else {
-            let num = account.replace(/\D/g, "")
-            db.run("UPDATE users SET balance = balance + ? WHERE accountNum=?", [amount, num], (err) => {
-                if (err) {
-                    console.error(err)
-                } else {
-                    console.log("Receiver Update Successful")
-                }
-            })
-            db.run("UPDATE users SET balance = balance - ? WHERE uid=?", [amount, req.session.num], (err) => {
-                if (err) {
-                    console.error(err)
-                } else {
-                    console.log("Sender Update Successful")
-                }
-            })
-            res.redirect("/")
-        }
-    })
+    if (req.body.amount && req.body.amount > 0) {
+        readFromPort("r0/", function (data) {
+            let amount = req.body.amount
+            let account = data
+            console.log(data);
+            if (account) {
+                let num = account.replace(/\D/g, "")
+                db.run("UPDATE users SET balance = balance + ? WHERE accountNum=?", [amount, num], (err) => {
+                    if (err) {
+                        console.error(err)
+                    } else {
+                        console.log("Receiver Update Successful")
+                    }
+                })
+                db.run("UPDATE users SET balance = balance - ? WHERE uid=?", [amount, req.session.num], (err) => {
+                    if (err) {
+                        console.error(err)
+                    } else {
+                        console.log("Sender Update Successful")
+                    }
+                })
+                res.redirect("/")
+            } else {
+                res.render('error', {
+                    error: "Couldn't Find Debit Pog",
+                    destination: "/transaction"
+                })
+            }
+        })
+    } else {
+        res.render('error', {
+            error: "Insufficient Amount",
+            destination: "/transaction"
+        })
+    }
 })
 
 app.get('/login', (req, res) => {
