@@ -17,7 +17,7 @@ SerialPort.list()
   .then((ports) => {
     // Create a new SerialPort instance
     port = new SerialPort({
-      path: 'COM3',
+      path: 'COM4',
       baudRate: 115200,
       autoOpen: true,
     });
@@ -75,7 +75,7 @@ function readFromPort(command, callback) {
   if (port) {
       let dataChunks = '';
       port.write(command + '\n');
-      port.on('data', (data) => {
+      port.on('data', function(data) {
           dataChunks += data.toString();
           if (data.toString().endsWith('\n')) {
               callback(dataChunks);
@@ -130,13 +130,12 @@ app.get('/', isAuthenticated, (req, res) => {
 })
 
 app.get('/transaction', isAuthenticated, (req, res) => {
+
     db.get("SELECT * FROM users WHERE uid=?", req.session.num, (err, row) => {
         if (row) {
             console.log(row)
             res.render('transaction', {
-                user: row.name,
-                accountNum: row.accountNum,
-                balance: row.balance
+                balance: row.balance,
             })
         } else {
             console.error(err)
@@ -145,27 +144,34 @@ app.get('/transaction', isAuthenticated, (req, res) => {
 })
 
 app.post('/transaction', isAuthenticated, (req, res) => {
-    let receiverNumber;
-    readFromPort("r0/", (data) => {
-        receiverNumber = data
-    })
-    let amount = req.body.amount
-    let account = receiverNumber.replace(/\D/g, "")
-    db.run("UPDATE users SET balance = balance + ? WHERE accountNum=?", [amount, account], (err) => {
-        if (err) {
-            console.error(err)
+    
+    readFromPort("r0/", function(data) {
+        let amount = req.body.amount
+        let account = data
+        if (amount == 0) {
+            res.render('error', {
+                error: "Insufficient Amount",
+                destination: "/transaction"
+            })
         } else {
-            console.log("Receiver Update Successful")
+            let num = account.replace(/\D/g, "")
+            db.run("UPDATE users SET balance = balance + ? WHERE accountNum=?", [amount, num], (err) => {
+                if (err) {
+                    console.error(err)
+                } else {
+                    console.log("Receiver Update Successful")
+                }
+            })
+            db.run("UPDATE users SET balance = balance - ? WHERE uid=?", [amount, req.session.num], (err) => {
+                if (err) {
+                    console.error(err)
+                } else {
+                    console.log("Sender Update Successful")
+                }
+            })
+            res.redirect("/")
         }
     })
-    db.run("UPDATE users SET balance = balance - ? WHERE uid=?", [amount, req.session.num], (err) => {
-        if (err) {
-            console.error(err)
-        } else {
-            console.log("Sender Update Successful")
-        }
-    })
-    res.redirect("/")
 })
 
 app.get('/login', (req, res) => {
